@@ -20,25 +20,25 @@ kubectl config set-context --current --namespace=demo-bluegreen
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: myapp-rollout
+  name: rollouts-demo
   namespace: demo-bluegreen
 spec:
   replicas: 3
   strategy:
     blueGreen:
-      activeService: myapp-active
-      previewService: myapp-preview
+      activeService: rollouts-demo-active
+      previewService: rollouts-demo-preview
       autoPromotionEnabled: false   # manual promotion for safety
   selector:
     matchLabels:
-      app: myapp
+      app: rollouts-demo
   template:
     metadata:
       labels:
-        app: myapp
+        app: rollouts-demo
     spec:
       containers:
-      - name: myapp
+      - name: rollouts-demo
         image: argoproj/rollouts-demo:blue   # start with blue version
         ports:
         - containerPort: 8080
@@ -58,13 +58,13 @@ kubectl apply -f rollout.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: myapp-active
+  name: rollouts-demo-active
 spec:
   ports:
   - port: 80
     targetPort: 8080
   selector:
-    app: myapp
+    app: rollouts-demo
 ```
 
 ### Preview Service (Testing)
@@ -72,13 +72,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: myapp-preview
+  name: rollouts-demo-preview
 spec:
   ports:
   - port: 80
     targetPort: 8080
   selector:
-    app: myapp
+    app: rollouts-demo
 ```
 
 Apply:
@@ -95,19 +95,19 @@ kubectl apply -f services.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: myapp-live-ingress
+  name: rollouts-demo-live-ingress
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-  - host: myapp.example.com
+  - host: rollouts-demo.example.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: myapp-active
+            name: rollouts-demo-active
             port:
               number: 80
 ```
@@ -117,19 +117,19 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: myapp-preview-ingress
+  name: rollouts-demo-preview-ingress
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-  - host: preview.myapp.example.com
+  - host: preview.rollouts-demo.example.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: myapp-preview
+            name: rollouts-demo-preview
             port:
               number: 80
 ```
@@ -145,22 +145,22 @@ kubectl apply -f ingress.yaml
 
 Edit your rollout:
 ```bash
-kubectl argo rollouts set image myapp-rollout myapp=argoproj/rollouts-demo:green
+kubectl argo rollouts set image rollouts-demo rollouts-demo=argoproj/rollouts-demo:green
 ```
 
 Watch progress:
 ```bash
-kubectl argo rollouts get rollout myapp-rollout --watch
+kubectl argo rollouts get rollout rollouts-demo --watch
 ```
 
 Once verified, **promote manually**:
 ```bash
-kubectl argo rollouts promote myapp-rollout
+kubectl argo rollouts promote rollouts-demo
 ```
 
 Rollback (if needed):
 ```bash
-kubectl argo rollouts undo myapp-rollout
+kubectl argo rollouts undo rollouts-demo
 ```
 
 ---
@@ -169,7 +169,7 @@ kubectl argo rollouts undo myapp-rollout
 
 Check rollout status:
 ```bash
-kubectl argo rollouts get rollout myapp-rollout
+kubectl argo rollouts get rollout rollouts-demo
 ```
 
 Open dashboard:
@@ -188,9 +188,9 @@ kubectl argo rollouts dashboard
                          │
            ┌─────────────┴─────────────┐
            │                           │
- ┌──────────────────┐        ┌──────────────────┐
- │ myapp-active svc │        │ myapp-preview svc│
- └────────┬─────────┘        └────────┬─────────┘
+ ┌────────────────────────┐  ┌────────────────────────┐
+ │ rollouts-demo-active   │  │ rollouts-demo-preview  │
+ └────────┬───────────────┘  └────────┬───────────────┘
           │                           │
     ┌────────────┐              ┌────────────┐
     │ Blue Pods  │              │ Green Pods │
@@ -212,9 +212,9 @@ kubectl argo rollouts dashboard
 | Resource | Purpose |
 |-----------|----------|
 | Rollout | Controls deployment logic |
-| myapp-active | Production service |
-| myapp-preview | Test service |
-| myapp-live-ingress | User-facing ingress |
-| myapp-preview-ingress | QA ingress |
+| rollouts-demo-active | Production service |
+| rollouts-demo-preview | Test service |
+| rollouts-demo-live-ingress | User-facing ingress |
+| rollouts-demo-preview-ingress | QA ingress |
 | argoproj/rollouts-demo:blue | Blue image |
 | argoproj/rollouts-demo:green | Green image |
